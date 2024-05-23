@@ -5,6 +5,7 @@
   window._btmEmbedIds = [];
   Array.prototype.forEach.call(embeds, function (el, i) {
     // console.log(`campaign`, el.dataset.campaign)
+
     console.log(el.dataset, "DATASET");
 
     window.btmEmbedConfig = {};
@@ -74,12 +75,27 @@
 
   function handleScroll(type) {
     callForAllIframes(function (iframe) {
-      document
-        .getElementById(iframe.id)
-        .contentWindow.postMessage(
-          { type: "PARENT_SCROLL", value: { scrolling: type === "start" } },
-          "*"
-        );
+      var navHeight = document.querySelector("nav").offsetHeight;
+      var iframeOffset = iframe.getBoundingClientRect();
+      var navbar = document.querySelector("nav");
+      var navbarOffset = navbar.getBoundingClientRect();
+
+      var intersectionRatio = Math.min(
+        1,
+        (navbarOffset.bottom - iframeOffset.top) / navbar.offsetHeight
+      );
+
+      var navHeight = navbar.offsetHeight * intersectionRatio;
+      document.getElementById(iframe.id).contentWindow.postMessage(
+        {
+          type: "PARENT_SCROLL",
+          value: {
+            navHeight: navbarOffset.bottom > iframeOffset.top ? navHeight : 0,
+            scrolling: type === "start",
+          },
+        },
+        "*"
+      );
     });
   }
 
@@ -112,5 +128,14 @@
   window.addEventListener("scroll", function () {
     handleScroll("start");
     debounceScrollStop();
+  });
+
+  window.addEventListener("message", function (event) {
+    if (event.data.type === "IFRAME_NAVBAR_OFFSET") {
+      // Handle message from iframe containing navbar offset
+      // You can extract offset information from event.data.value
+      // and use it as needed in the parent window
+      console.log("Received iframe navbar offset:", event.data.value);
+    }
   });
 })();
